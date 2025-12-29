@@ -366,12 +366,20 @@ const UserDashboard = () => {
 
   // Leads data - enhanced
   const { data: leadsData, isLoading: leadsLoading } = useQuery({
-    queryKey: ['user-leads-enhanced', user?.id],
+    queryKey: ['dashboard-leads-enhanced'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('leads').select('id, lead_status, lead_name, created_time').eq('created_by', user?.id);
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, lead_status, lead_name, created_time');
       if (error) throw error;
       const leads = data || [];
-      const recentLead = leads.sort((a, b) => new Date(b.created_time || 0).getTime() - new Date(a.created_time || 0).getTime())[0];
+      const recentLead = leads
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.created_time || 0).getTime() -
+            new Date(a.created_time || 0).getTime()
+        )[0];
       return {
         total: leads.length,
         new: leads.filter(l => l.lead_status === 'New').length,
@@ -386,16 +394,24 @@ const UserDashboard = () => {
 
   // Contacts data - enhanced
   const { data: contactsData, isLoading: contactsLoading } = useQuery({
-    queryKey: ['user-contacts-enhanced', user?.id],
+    queryKey: ['dashboard-contacts-enhanced'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, contact_name, email, phone_no, segment, created_time').eq('created_by', user?.id);
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, contact_name, email, phone_no, segment, created_time');
       if (error) throw error;
       const contacts = data || [];
       const withEmail = contacts.filter(c => c.email).length;
       const withPhone = contacts.filter(c => c.phone_no).length;
       const prospects = contacts.filter(c => c.segment === 'prospect').length;
       const customers = contacts.filter(c => c.segment === 'customer').length;
-      const recentContact = contacts.sort((a, b) => new Date(b.created_time || 0).getTime() - new Date(a.created_time || 0).getTime())[0];
+      const recentContact = contacts
+        .slice()
+        .sort(
+          (a, b) =>
+            new Date(b.created_time || 0).getTime() -
+            new Date(a.created_time || 0).getTime()
+        )[0];
       return { total: contacts.length, withEmail, withPhone, prospects, customers, recentContact: recentContact?.contact_name || null };
     },
     enabled: !!user?.id
@@ -403,16 +419,18 @@ const UserDashboard = () => {
 
   // Deals data - enhanced
   const { data: dealsData, isLoading: dealsLoading } = useQuery({
-    queryKey: ['user-deals-enhanced', user?.id],
+    queryKey: ['dashboard-deals-enhanced'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('deals').select('id, stage, total_contract_value, deal_name, created_by, lead_owner, expected_closing_date');
+      const { data, error } = await supabase
+        .from('deals')
+        .select('id, stage, total_contract_value, deal_name, created_by, lead_owner, expected_closing_date');
       if (error) throw error;
-      const userDeals = (data || []).filter(d => d.created_by === user?.id || d.lead_owner === user?.id);
-      const activeDeals = userDeals.filter(d => !['Won', 'Lost', 'Dropped'].includes(d.stage));
-      const wonDeals = userDeals.filter(d => d.stage === 'Won');
+      const deals = data || [];
+      const activeDeals = deals.filter(d => !['Won', 'Lost', 'Dropped'].includes(d.stage));
+      const wonDeals = deals.filter(d => d.stage === 'Won');
       const totalPipeline = activeDeals.reduce((sum, d) => sum + (d.total_contract_value || 0), 0);
       const wonValue = wonDeals.reduce((sum, d) => sum + (d.total_contract_value || 0), 0);
-      
+
       // Deals closing this month
       const now = new Date();
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -421,20 +439,20 @@ const UserDashboard = () => {
         const closeDate = new Date(d.expected_closing_date);
         return closeDate <= monthEnd && closeDate >= now;
       });
-      
+
       return {
-        total: userDeals.length,
+        total: deals.length,
         active: activeDeals.length,
         won: wonDeals.length,
-        lost: userDeals.filter(d => d.stage === 'Lost').length,
+        lost: deals.filter(d => d.stage === 'Lost').length,
         totalPipeline,
         wonValue,
         closingThisMonth: closingThisMonth.length,
         closingValue: closingThisMonth.reduce((sum, d) => sum + (d.total_contract_value || 0), 0),
         byStage: {
-          lead: userDeals.filter(d => d.stage === 'Lead').length,
-          qualified: userDeals.filter(d => d.stage === 'Qualified').length,
-          discussions: userDeals.filter(d => d.stage === 'Discussions').length,
+          lead: deals.filter(d => d.stage === 'Lead').length,
+          qualified: deals.filter(d => d.stage === 'Qualified').length,
+          discussions: deals.filter(d => d.stage === 'Discussions').length,
         }
       };
     },
@@ -443,11 +461,13 @@ const UserDashboard = () => {
 
   // Accounts data - enhanced
   const { data: accountsData, isLoading: accountsLoading } = useQuery({
-    queryKey: ['user-accounts-enhanced', user?.id],
+    queryKey: ['dashboard-accounts-enhanced'],
     queryFn: async () => {
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const { data, error } = await supabase.from('accounts').select('id, company_name, segment, status, created_at, total_revenue').eq('created_by', user?.id);
+      const { data, error } = await supabase
+        .from('accounts')
+        .select('id, company_name, segment, status, created_at, total_revenue');
       if (error) throw error;
       const accounts = data || [];
       const newThisMonth = accounts.filter(a => new Date(a.created_at || 0) >= monthStart).length;
@@ -464,10 +484,20 @@ const UserDashboard = () => {
 
   // Action items - enhanced
   const { data: actionItemsData, isLoading: actionItemsLoading } = useQuery({
-    queryKey: ['user-action-items-enhanced', user?.id],
+    queryKey: ['dashboard-action-items-enhanced'],
     queryFn: async () => {
-      const { data: dealItems } = await supabase.from('deal_action_items').select('id, status, due_date, next_action').eq('assigned_to', user?.id).eq('status', 'Open').order('due_date', { ascending: true }).limit(5);
-      const { data: leadItems } = await supabase.from('lead_action_items').select('id, status, due_date, next_action').eq('assigned_to', user?.id).eq('status', 'Open').order('due_date', { ascending: true }).limit(5);
+      const { data: dealItems } = await supabase
+        .from('deal_action_items')
+        .select('id, status, due_date, next_action')
+        .eq('status', 'Open')
+        .order('due_date', { ascending: true })
+        .limit(5);
+      const { data: leadItems } = await supabase
+        .from('lead_action_items')
+        .select('id, status, due_date, next_action')
+        .eq('status', 'Open')
+        .order('due_date', { ascending: true })
+        .limit(5);
       const allItems = [...(dealItems || []), ...(leadItems || [])];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -481,14 +511,13 @@ const UserDashboard = () => {
 
   // Upcoming meetings - enhanced
   const { data: upcomingMeetings } = useQuery({
-    queryKey: ['user-upcoming-meetings-enhanced', user?.id],
+    queryKey: ['dashboard-upcoming-meetings-enhanced'],
     queryFn: async () => {
       const now = new Date().toISOString();
       const weekFromNow = addDays(new Date(), 7).toISOString();
       const { data, error } = await supabase
         .from('meetings')
         .select('id, subject, start_time, end_time, status, attendees')
-        .eq('created_by', user?.id)
         .gte('start_time', now)
         .lte('start_time', weekFromNow)
         .order('start_time', { ascending: true })
@@ -505,7 +534,7 @@ const UserDashboard = () => {
 
   // Today's meetings for agenda
   const { data: todaysMeetings } = useQuery({
-    queryKey: ['user-todays-meetings', user?.id],
+    queryKey: ['dashboard-todays-meetings'],
     queryFn: async () => {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -514,7 +543,6 @@ const UserDashboard = () => {
       const { data, error } = await supabase
         .from('meetings')
         .select('id, subject, start_time, end_time, status')
-        .eq('created_by', user?.id)
         .gte('start_time', todayStart.toISOString())
         .lte('start_time', todayEnd.toISOString())
         .order('start_time', { ascending: true });
@@ -526,13 +554,12 @@ const UserDashboard = () => {
 
   // Today's tasks for agenda
   const { data: todaysTasks } = useQuery({
-    queryKey: ['user-todays-tasks', user?.id],
+    queryKey: ['dashboard-todays-tasks'],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('tasks')
         .select('id, title, due_date, priority, status')
-        .or(`assigned_to.eq.${user?.id},created_by.eq.${user?.id}`)
         .in('status', ['open', 'in_progress'])
         .eq('due_date', today)
         .order('priority', { ascending: true });
@@ -544,13 +571,12 @@ const UserDashboard = () => {
 
   // Overdue tasks for agenda
   const { data: overdueTasks } = useQuery({
-    queryKey: ['user-overdue-tasks', user?.id],
+    queryKey: ['dashboard-overdue-tasks'],
     queryFn: async () => {
       const today = format(new Date(), 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('tasks')
         .select('id, title, due_date, priority, status')
-        .or(`assigned_to.eq.${user?.id},created_by.eq.${user?.id}`)
         .in('status', ['open', 'in_progress'])
         .lt('due_date', today)
         .order('due_date', { ascending: true })
@@ -563,14 +589,13 @@ const UserDashboard = () => {
 
   // Task reminders
   const { data: taskReminders } = useQuery({
-    queryKey: ['user-task-reminders-enhanced', user?.id],
+    queryKey: ['dashboard-task-reminders-enhanced'],
     queryFn: async () => {
       const weekFromNow = format(addDays(new Date(), 7), 'yyyy-MM-dd');
       const today = format(new Date(), 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('tasks')
         .select('id, title, due_date, priority, status')
-        .or(`assigned_to.eq.${user?.id},created_by.eq.${user?.id}`)
         .in('status', ['open', 'in_progress'])
         .lte('due_date', weekFromNow)
         .order('due_date', { ascending: true })
@@ -587,12 +612,11 @@ const UserDashboard = () => {
 
   // Email stats - enhanced
   const { data: emailStats } = useQuery({
-    queryKey: ['user-email-stats-enhanced', user?.id],
+    queryKey: ['dashboard-email-stats-enhanced'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('email_history')
         .select('id, status, open_count, click_count, subject, sent_at')
-        .eq('sent_by', user?.id)
         .order('sent_at', { ascending: false });
       if (error) throw error;
       const emails = data || [];
@@ -609,12 +633,11 @@ const UserDashboard = () => {
 
   // Follow-ups due
   const { data: followUpsDue } = useQuery({
-    queryKey: ['user-follow-ups-due', user?.id],
+    queryKey: ['dashboard-follow-ups-due'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('meeting_follow_ups')
         .select('id, title, status, due_date, meeting_id')
-        .eq('assigned_to', user?.id)
         .eq('status', 'pending')
         .order('due_date', { ascending: true })
         .limit(5);
@@ -629,21 +652,21 @@ const UserDashboard = () => {
 
   // Weekly summary
   const { data: weeklySummary } = useQuery({
-    queryKey: ['user-weekly-summary', user?.id],
+    queryKey: ['dashboard-weekly-summary'],
     queryFn: async () => {
       const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
       const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
       const startStr = weekStart.toISOString();
       const endStr = weekEnd.toISOString();
-      
+
       const [leadsRes, contactsRes, dealsRes, meetingsRes, tasksRes] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact', head: true }).eq('created_by', user?.id).gte('created_time', startStr).lte('created_time', endStr),
-        supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('created_by', user?.id).gte('created_time', startStr).lte('created_time', endStr),
-        supabase.from('deals').select('id', { count: 'exact', head: true }).eq('created_by', user?.id).gte('created_at', startStr).lte('created_at', endStr),
-        supabase.from('meetings').select('id', { count: 'exact', head: true }).eq('created_by', user?.id).eq('status', 'completed').gte('start_time', startStr).lte('start_time', endStr),
-        supabase.from('tasks').select('id', { count: 'exact', head: true }).or(`assigned_to.eq.${user?.id},created_by.eq.${user?.id}`).eq('status', 'completed').gte('completed_at', startStr).lte('completed_at', endStr),
+        supabase.from('leads').select('id', { count: 'exact', head: true }).gte('created_time', startStr).lte('created_time', endStr),
+        supabase.from('contacts').select('id', { count: 'exact', head: true }).gte('created_time', startStr).lte('created_time', endStr),
+        supabase.from('deals').select('id', { count: 'exact', head: true }).gte('created_at', startStr).lte('created_at', endStr),
+        supabase.from('meetings').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('start_time', startStr).lte('start_time', endStr),
+        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'completed').gte('completed_at', startStr).lte('completed_at', endStr),
       ]);
-      
+
       return {
         newLeads: leadsRes.count || 0,
         newContacts: contactsRes.count || 0,
@@ -678,12 +701,11 @@ const UserDashboard = () => {
   };
 
   const { data: recentActivities } = useQuery({
-    queryKey: ['user-recent-activities', user?.id, userProfiles],
+    queryKey: ['dashboard-recent-activities', userProfiles],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('security_audit_log')
         .select('id, action, resource_type, resource_id, created_at, details, user_id')
-        .eq('user_id', user?.id)
         .in('action', ['CREATE', 'UPDATE', 'DELETE'])
         .in('resource_type', ['contacts', 'leads', 'deals', 'accounts', 'meetings', 'tasks'])
         .order('created_at', { ascending: false })
@@ -693,7 +715,7 @@ const UserDashboard = () => {
       return (data || []).map(log => {
         let detailedSubject = `${log.action} ${log.resource_type}`;
         const details = log.details as any;
-        
+
         if (log.action === 'UPDATE' && details?.field_changes) {
           const changedFields = Object.keys(details.field_changes);
           if (changedFields.length > 0) {
@@ -716,7 +738,7 @@ const UserDashboard = () => {
                             details.deleted_data.title || details.deleted_data.subject || '';
           if (recordName) detailedSubject = `Deleted ${log.resource_type} - "${recordName}"`;
         }
-        
+
         return {
           id: log.id,
           subject: detailedSubject,
@@ -762,7 +784,7 @@ const UserDashboard = () => {
         return (
           <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer animate-fade-in" onClick={() => !isResizeMode && navigate('/leads')}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">My Leads</CardTitle>
+              <CardTitle className="text-sm font-medium">All Leads</CardTitle>
               <FileText className="w-4 h-4 text-blue-600" />
             </CardHeader>
             <CardContent className="space-y-2">
@@ -783,7 +805,7 @@ const UserDashboard = () => {
         return (
           <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer animate-fade-in" onClick={() => !isResizeMode && navigate('/contacts')}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">My Contacts</CardTitle>
+              <CardTitle className="text-sm font-medium">All Contacts</CardTitle>
               <Users className="w-4 h-4 text-green-600" />
             </CardHeader>
             <CardContent className="space-y-2">
@@ -805,7 +827,7 @@ const UserDashboard = () => {
         return (
           <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer animate-fade-in" onClick={() => !isResizeMode && navigate('/deals')}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">My Deals</CardTitle>
+              <CardTitle className="text-sm font-medium">All Deals</CardTitle>
               <Briefcase className="w-4 h-4 text-purple-600" />
             </CardHeader>
             <CardContent className="space-y-2">
@@ -907,7 +929,7 @@ const UserDashboard = () => {
         return (
           <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer animate-fade-in" onClick={() => !isResizeMode && navigate('/deals')}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">My Pipeline</CardTitle>
+              <CardTitle className="text-sm font-medium">Pipeline</CardTitle>
               <TrendingUp className="w-4 h-4 text-emerald-600" />
             </CardHeader>
             <CardContent className="space-y-2">
@@ -1137,7 +1159,7 @@ const UserDashboard = () => {
                     <TooltipTrigger asChild>
                       <Info className="w-4 h-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
-                    <TooltipContent><p>Your leads by status</p></TooltipContent>
+                    <TooltipContent><p>All leads by status</p></TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </CardTitle>
