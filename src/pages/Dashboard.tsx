@@ -141,21 +141,15 @@ const Dashboard = () => {
       <div className="flex-shrink-0 bg-background">
         <div className="px-6 h-16 flex items-center border-b w-full">
           <div className="flex items-center justify-between w-full gap-4">
-            {/* Left side: Greeting and optional view toggle */}
+            {/* Left side: View toggle and greeting */}
             <div className="flex items-center gap-4 min-w-0 flex-1">
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-semibold text-foreground truncate">
-                  {greeting}{userName ? `, ${userName}` : ''}!
-                </h1>
-              </div>
-              
-              {/* Admin-only view toggle */}
+              {/* Admin-only view toggle - positioned first/left */}
               {isAdmin && (
                 <ToggleGroup 
                   type="single" 
                   value={currentView} 
                   onValueChange={handleViewChange}
-                  className="bg-muted/60 border border-border rounded-lg p-1 hidden sm:flex"
+                  className="bg-muted/60 border border-border rounded-lg p-1 hidden sm:flex flex-shrink-0"
                 >
                   <ToggleGroupItem 
                     value="overview" 
@@ -175,6 +169,12 @@ const Dashboard = () => {
                   </ToggleGroupItem>
                 </ToggleGroup>
               )}
+              
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-semibold text-foreground truncate">
+                  {greeting}{userName ? `, ${userName}` : ''}!
+                </h1>
+              </div>
             </div>
             
             {/* Right side: Actions */}
