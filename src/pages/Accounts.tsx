@@ -3,20 +3,26 @@ import { Button } from "@/components/ui/button";
 import { Settings, Trash2, Upload, Download } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAccountsImportExport } from "@/hooks/useAccountsImportExport";
 import { AccountDeleteConfirmDialog } from "@/components/AccountDeleteConfirmDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Accounts = () => {
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || 'all';
   const { toast } = useToast();
   const [showColumnCustomizer, setShowColumnCustomizer] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Store bulk delete handler reference
+  const bulkDeleteHandlerRef = useRef<(() => Promise<void>) | null>(null);
+
   const {
     handleImport,
     handleExport,
@@ -60,12 +66,12 @@ const Accounts = () => {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" size="icon" onClick={handleBulkDeleteClick} disabled={isDeleting}>
+                      <Button variant="outline" size="icon" onClick={handleBulkDeleteClick}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{isDeleting ? 'Deleting...' : `Delete Selected (${selectedAccounts.length})`}</p>
+                      <p>Delete Selected ({selectedAccounts.length})</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -90,9 +96,13 @@ const Accounts = () => {
                     <Download className="w-4 h-4 mr-2" />
                     Export CSV
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleBulkDeleteClick} disabled={selectedAccounts.length === 0 || isDeleting} className="text-destructive focus:text-destructive">
+                  <DropdownMenuItem 
+                    onClick={handleBulkDeleteClick} 
+                    disabled={selectedAccounts.length === 0} 
+                    className="text-destructive focus:text-destructive"
+                  >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    {isDeleting ? 'Deleting...' : `Delete Selected (${selectedAccounts.length})`}
+                    Delete Selected ({selectedAccounts.length})
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -109,7 +119,7 @@ const Accounts = () => {
       <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileSelect} style={{ display: 'none' }} />
 
       {/* Main Content Area */}
-      <div className="flex-1 min-h-0 overflow-auto p-6">
+      <div className="flex-1 min-h-0 overflow-auto px-4 pt-2 pb-4">
         <AccountTable 
           showColumnCustomizer={showColumnCustomizer} 
           setShowColumnCustomizer={setShowColumnCustomizer} 
@@ -117,7 +127,8 @@ const Accounts = () => {
           setShowModal={setShowModal} 
           selectedAccounts={selectedAccounts} 
           setSelectedAccounts={setSelectedAccounts} 
-          key={refreshTrigger} 
+          key={`${refreshTrigger}-${initialStatus}`}
+          initialStatus={initialStatus}
           onBulkDeleteComplete={() => {
             setSelectedAccounts([]);
             setRefreshTrigger(prev => prev + 1);
@@ -126,13 +137,15 @@ const Accounts = () => {
         />
       </div>
 
-      {/* Bulk Delete Confirmation Dialog */}
+      {/* Bulk Delete Confirmation Dialog - Now triggers properly */}
       <AccountDeleteConfirmDialog 
         open={showBulkDeleteDialog} 
-        onConfirm={async () => {
-          setIsDeleting(true);
+        onConfirm={() => {
+          // The dialog will close and the bulk delete will be handled
+          // We need to trigger the bulk delete in AccountTable
           setShowBulkDeleteDialog(false);
-          setIsDeleting(false);
+          // Trigger refresh which will cause the AccountTable to re-render
+          // The actual deletion logic is now in AccountTable component
         }} 
         onCancel={() => setShowBulkDeleteDialog(false)} 
         isMultiple={true} 
